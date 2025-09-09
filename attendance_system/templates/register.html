@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah User Baru - Sistem Absensi{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-form">
+        <div class="form-header">
+            <h2>Tambah User Baru</h2>
+            <p>Hanya admin yang dapat menambah user</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="is_admin" id="is_admin">
+                    Buat sebagai Admin
+                </label>
+            </div>
+            
+            <div class="form-buttons">
+                <button type="submit" class="btn btn-primary">Tambah User</button>
+                <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">Batal</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.register-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+    padding: 2rem;
+}
+
+.register-form {
+    background: white;
+    padding: 3rem;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+}
+</style>
+{% endblock %}

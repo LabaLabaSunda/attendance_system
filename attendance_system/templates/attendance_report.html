@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan Absensi - Sistem Absensi{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="page-header">
+        <h1>Laporan Absensi</h1>
+        <p>Laporan kehadiran semua karyawan</p>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="filter-section">
+        <form method="GET" class="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="start_date">Tanggal Mulai:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="end_date">Tanggal Akhir:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label for="user_id">Karyawan:</label>
+                    <select id="user_id" name="user_id">
+                        <option value="">Semua Karyawan</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if user_filter and user_filter|int == user.id %}selected{% endif %}>
+                            {{ user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-buttons">
+                    <button type="submit" class="btn btn-primary">🔍 Filter</button>
+                    <a href="{{ url_for('attendance_report') }}" class="btn btn-secondary">🔄 Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    {% if attendances %}
+        <div class="report-stats">
+            <div class="stat-card">
+                <h3>{{ attendances|length }}</h3>
+                <p>Total Records</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ attendances|selectattr('0.time_in')|list|length }}</h3>
+                <p>Check-in</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ attendances|selectattr('0.time_out')|list|length }}</h3>
+                <p>Check-out</p>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Karyawan</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Durasi</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance, user in attendances %}
+                    <tr>
+                        <td>{{ attendance.date.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            {% if attendance.time_in %}
+                                {{ attendance.time_in.strftime('%H:%M') }}
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if attendance.time_out %}
+                                {{ attendance.time_out.strftime('%H:%M') }}
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if attendance.time_in and attendance.time_out %}
+                                {% set duration = attendance.time_out - attendance.time_in %}
+                                {% set hours = duration.seconds // 3600 %}
+                                {% set minutes = (duration.seconds % 3600) // 60 %}
+                                {{ hours }}j {{ minutes }}m
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ attendance.status }}">
+                                {{ attendance.status.title() }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-data-message">
+            <h3>Tidak ada data</h3>
+            <p>Tidak ada data absensi yang sesuai dengan filter.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.report-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    color: white;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.filter-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #555;
+}
+
+.filter-group input,
+.filter-group select {
+    padding: 0.8rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.report-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border-top: 4px solid #667eea;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.report-table th,
+.report-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.report-table th {
+    background: #667eea;
+    color: white;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.report-table tr:hover {
+    background: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-buttons {
+        justify-content: stretch;
+    }
+    
+    .filter-buttons .btn {
+        flex: 1;
+    }
+    
+    .report-table {
+        font-size: 0.85rem;
+    }
+    
+    .report-table th,
+    .report-table td {
+        padding: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

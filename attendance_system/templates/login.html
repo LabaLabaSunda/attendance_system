@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Sistem Absensi{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-form">
+        <div class="form-header">
+            <h2>Login</h2>
+            <p>Masuk ke sistem absensi</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        
+        <div class="demo-info">
+            <h4>Demo Akun:</h4>
+            <p><strong>Admin:</strong> admin / admin123</p>
+            <p><strong>User:</strong> user1 / password123</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

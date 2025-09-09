@@ -1,0 +1,592 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistem Absensi{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="welcome-section">
+        <h1>Selamat datang, {{ current_user.username }}!</h1>
+        <p>Tanggal: {{ today.strftime('%d %B %Y') }}</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="attendance-card">
+            <h3>Status Absensi Hari Ini</h3>
+            {% if attendance %}
+                <div class="attendance-status">
+                    <div class="status-item">
+                        <span class="status-label">Check-in:</span>
+                        <span class="status-value">
+                            {% if attendance.time_in %}
+                                {{ attendance.time_in.strftime('%H:%M') }}
+                            {% else %}
+                                Belum check-in
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Check-out:</span>
+                        <span class="status-value">
+                            {% if attendance.time_out %}
+                                {{ attendance.time_out.strftime('%H:%M') }}
+                            {% else %}
+                                Belum check-out
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-{{ attendance.status }}">
+                            {{ attendance.status.title() }}
+                        </span>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-attendance">Belum melakukan absensi hari ini</p>
+            {% endif %}
+        </div>
+
+        <div class="qr-code-card">
+            <h3>QR Code Absensi</h3>
+            <div class="qr-code-container">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code Absensi" class="qr-code">
+            </div>
+            <p class="qr-info">Scan QR Code ini untuk absensi otomatis</p>
+            
+            <!-- URL untuk testing manual -->
+            <div class="qr-url-test">
+                <p><strong> Untuk Testing QR Code:</strong></p>
+                <div class="url-container">
+                    <input type="text" id="qrUrl" value="{{ qr_url }}" readonly class="qr-url-input">
+                    <div class="url-buttons">
+                        <button onclick="copyQRUrl()" class="btn-copy"> Copy URL</button>
+                        <a href="{{ qr_url }}" target="_blank" class="btn btn-info"> Test Manual</a>
+                    </div>
+                </div>
+                <div class="test-instructions">
+                    <small>
+                        <strong>Cara Test:</strong><br>
+                        1. Klik "Test Manual" untuk simulasi scan<br>
+                        2. Copy URL dan buka di tab/HP lain<br>
+                        3. Scan QR Code dengan aplikasi scanner HP
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Buttons simulasi -->
+            <div class="action-buttons">
+                <button onclick="simulateCheckIn()" class="btn btn-success" id="checkinBtn">
+                    {% if attendance and attendance.time_in %}
+                         Check-in Selesai
+                    {% else %}
+                         Check-in (Simulasi)
+                    {% endif %}
+                </button>
+                <button onclick="simulateCheckOut()" class="btn btn-warning" id="checkoutBtn">
+                    {% if attendance and attendance.time_out %}
+                         Check-out Selesai
+                    {% else %}
+                         Check-out (Simulasi)
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info tambahan -->
+    <div class="info-section">
+        <div class="info-card">
+            <h4>Cara Scan QR Code:</h4>
+            <ol>
+                <li>Buka aplikasi Camera atau QR Scanner di HP</li>
+                <li>Arahkan kamera ke QR Code di layar</li>
+                <li>Ketuk link yang muncul</li>
+                <li>Absensi otomatis tercatat!</li>
+            </ol>
+        </div>
+        <div class="info-card">
+            <h4>Keamanan QR Code:</h4>
+            <ul>
+                <li>QR Code berisi token unik</li>
+                <li>Hanya valid untuk hari ini</li>
+                <li>Otomatis expired besok</li>
+                <li>Tidak bisa digunakan user lain</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Styling khusus untuk dashboard */
+.qr-url-test {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    border: 2px dashed #667eea;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.qr-url-test p {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.url-container {
+    margin-bottom: 1rem;
+}
+
+.qr-url-input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+    background: white;
+    margin-bottom: 0.8rem;
+    word-break: break-all;
+    transition: border-color 0.3s ease;
+}
+
+.qr-url-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.url-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-copy {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
+}
+
+.btn-copy:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
+}
+
+.btn-copy:active {
+    transform: translateY(0);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+    color: white;
+    text-decoration: none;
+    padding: 0.8rem 1.2rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: inline-block;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(111, 66, 193, 0.3);
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #5a32a3 0%, #4c2a85 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(111, 66, 193, 0.4);
+    color: white;
+}
+
+.test-instructions {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.8rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    border-left: 4px solid #667eea;
+}
+
+.test-instructions small {
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.info-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.info-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-top: 4px solid #667eea;
+}
+
+.info-card h4 {
+    color: #667eea;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.info-card ol,
+.info-card ul {
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.info-card li {
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive untuk mobile */
+@media (max-width: 768px) {
+    .url-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-copy, .btn-info {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .info-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .test-instructions {
+        font-size: 0.85rem;
+    }
+}
+
+/* Loading animation untuk buttons */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+    border: 2px solid transparent;
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: button-loading-spinner 1s linear infinite;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes button-loading-spinner {
+    from { transform: translate(-50%, -50%) rotate(0turn); }
+    to { transform: translate(-50%, -50%) rotate(1turn); }
+}
+
+/* Pulse animation untuk QR Code */
+.qr-code {
+    animation: qr-pulse 2s ease-in-out infinite;
+}
+
+/* @keyframes qr-pulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+    }
+} */
+
+/* Success animation */
+.btn-success-animated {
+    animation: success-bounce 0.6s ease;
+}
+
+@keyframes success-bounce {
+    0%, 20%, 53%, 80%, 100% {
+        transform: translate3d(0,0,0);
+    }
+    40%, 43% {
+        transform: translate3d(0, -8px, 0);
+    }
+    70% {
+        transform: translate3d(0, -4px, 0);
+    }
+    90% {
+        transform: translate3d(0, -1px, 0);
+    }
+}
+</style>
+
+<script>
+// Fungsi untuk copy URL QR Code dengan feedback visual
+function copyQRUrl() {
+    const urlInput = document.getElementById('qrUrl');
+    const copyBtn = document.querySelector('.btn-copy');
+    
+    // Select dan copy text
+    urlInput.select();
+    urlInput.setSelectionRange(0, 99999);
+    
+    // Modern clipboard API dengan fallback
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(urlInput.value).then(function() {
+            showCopySuccess(copyBtn);
+        }).catch(function() {
+            // Fallback untuk browser lama
+            document.execCommand('copy');
+            showCopySuccess(copyBtn);
+        });
+    } else {
+        // Fallback untuk browser lama
+        document.execCommand('copy');
+        showCopySuccess(copyBtn);
+    }
+}
+
+// Fungsi untuk menampilkan feedback copy berhasil
+function showCopySuccess(button) {
+    const originalText = button.innerHTML;
+    button.innerHTML = '✅ Tersalin!';
+    button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+    
+    // Show notification
+    showNotification('URL QR Code berhasil di-copy!', 'success');
+    
+    // Reset button setelah 2 detik
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)';
+    }, 2000);
+}
+
+// Fungsi untuk menampilkan notifikasi
+function showNotification(message, type = 'info') {
+    // Hapus notifikasi sebelumnya
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notif => notif.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icons = {
+        'success': '✅',
+        'error': '❌',
+        'info': 'ℹ️',
+        'warning': '⚠️'
+    };
+    
+    notification.innerHTML = `
+        <span class="notification-icon">${icons[type] || icons.info}</span>
+        <span class="notification-message">${message}</span>
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    // Styling notifikasi
+    const colors = {
+        'success': '#28a745',
+        'error': '#dc3545',
+        'info': '#007bff',
+        'warning': '#ffc107'
+    };
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type] || colors.info};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideInRight 0.3s ease;
+        max-width: 400px;
+        font-weight: 500;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove setelah 4 detik
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+// Fungsi untuk simulasi scan QR Code check-in dengan loading state
+function simulateCheckIn() {
+    const button = document.getElementById('checkinBtn');
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.classList.add('btn-loading');
+    button.innerHTML = '🔄 Processing...';
+    button.disabled = true;
+    
+    fetch('/scan_qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({action: 'checkin'})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            // Remove animation
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Terjadi kesalahan saat melakukan check-in', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        button.classList.remove('btn-loading');
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Fungsi untuk simulasi scan QR Code check-out dengan loading state
+function simulateCheckOut() {
+    const button = document.getElementById('checkoutBtn');
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.classList.add('btn-loading');
+    button.innerHTML = '🔄 Processing...';
+    button.disabled = true;
+    
+    fetch('/scan_qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({action: 'checkout'})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            button.classList.add('btn-success-animated');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Terjadi kesalahan saat melakukan check-out', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        button.classList.remove('btn-loading');
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Auto refresh QR Code setiap 5 menit
+setInterval(function() {
+    console.log('Auto refreshing QR Code...');
+    location.reload();
+}, 300000); // 5 menit
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl + C untuk copy QR URL
+    if (e.ctrlKey && e.key === 'c' && e.target.id === 'qrUrl') {
+        e.preventDefault();
+        copyQRUrl();
+    }
+    
+    // F5 untuk refresh manual
+    if (e.key === 'F5') {
+        showNotification('Refreshing QR Code...', 'info');
+    }
+});
+
+// Visual feedback saat hover QR Code (lebih halus)
+document.querySelector('.qr-code').addEventListener('mouseenter', function() {
+    this.style.transform = 'scale(1.05)';
+});
+
+document.querySelector('.qr-code').addEventListener('mouseleave', function() {
+    this.style.transform = 'scale(1)';
+});
+
+// Tampilkan info loading saat pertama kali load
+window.addEventListener('load', function() {
+    showNotification('QR Code siap untuk di-scan! ', 'success');
+});
+</script>
+
+<!-- Additional CSS animations -->
+<style>
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Riwayat Absensi - Sistem Absensi{% endblock %}
+
+{% block content %}
+<div class="attendance-history-container">
+    <div class="page-header">
+        <h1>Riwayat Absensi</h1>
+        <p>Data absensi 30 hari terakhir</p>
+    </div>
+
+    {% if attendances %}
+        <div class="table-container">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Status</th>
+                        <th>Durasi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                    <tr>
+                        <td>{{ attendance.date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if attendance.time_in %}
+                                {{ attendance.time_in.strftime('%H:%M') }}
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if attendance.time_out %}
+                                {{ attendance.time_out.strftime('%H:%M') }}
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ attendance.status }}">
+                                {{ attendance.status.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if attendance.time_in and attendance.time_out %}
+                                {% set duration = attendance.time_out - attendance.time_in %}
+                                {% set hours = duration.seconds // 3600 %}
+                                {% set minutes = (duration.seconds % 3600) // 60 %}
+                                {{ hours }}j {{ minutes }}m
+                            {% else %}
+                                <span class="no-data">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-data-message">
+            <p>Belum ada data absensi.</p>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Kembali ke Dashboard</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
